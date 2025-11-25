@@ -1,43 +1,38 @@
 package database
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	"github.com/joho/godotenv"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
-func DBinstance() *mongo.Client{
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatal("Error locading the .env file")
-	}
+func DBinstance() *gorm.DB {
+    err := godotenv.Load(".env")
+    if err != nil {
+        log.Fatal("Error loading the .env file")
+    }
 
-	MongoDb := os.Getenv("THE_MONGODB_URL")
+    // Get PostgreSQL URL from .env (instead of MongoDB)
+    PostgresDB := os.Getenv("DATABASE_URL")
 
-	client, err := mongo.NewClient(options.Client().ApplyURI(MongoDb))
-	if err != nil {
-		log.Fatal(err)
-	}
+    // Connect to PostgreSQL (instead of MongoDB)
+    client, err := gorm.Open(postgres.Open(PostgresDB), &gorm.Config{
+        Logger: logger.Default.LogMode(logger.Info),
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	err = client.Connect(ctx)
-	if err!=nil{
-		log.Fatal(err)
-	}
-	fmt.Println("Connected to MongoDB!!")
-	return client
+    fmt.Println("Connected to PostgreSQL!!")
+    return client
 }
 
-var Client *mongo.Client = DBinstance()
+var Client *gorm.DB = DBinstance()
 
-func OpenCollection(client *mongo.Client, collectionName string) *mongo.Collection {
-	var collection *mongo.Collection = client.Database("cluster0").Collection(collectionName)
-	return collection
-}
+// Note: OpenCollection is not needed for PostgreSQL/GORM
+// GORM works directly with models, no need for collections
